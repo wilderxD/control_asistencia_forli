@@ -1,9 +1,11 @@
-const URL = (import.meta as unknown as { env: Record<string,string> }).env.VITE_APPS_SCRIPT_URL || '';
+const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycby9vtsnK1VsaLlktfB4F8o7uz3Qpo5bkq-JlSXtAZW-WgCLQbZOo-9rBROydRu_xw/exec'
+const URL = ((import.meta as unknown as { env: Record<string,string> }).env.VITE_APPS_SCRIPT_URL || DEFAULT_URL).trim()
 
 async function post<T>(action: string, payload: Record<string,unknown> = {}): Promise<T> {
-  if (!URL) throw new Error('VITE_APPS_SCRIPT_URL no configurado');
+  if (!URL) throw new Error('Falta configurar VITE_APPS_SCRIPT_URL: en Netlify ve a Site settings → Environment variables y redeploya.')
   const res = await fetch(URL, { method: 'POST', body: JSON.stringify({ action, ...payload }) });
-  const j = await res.json() as { success: boolean; data: T; error?: string; details?: unknown };
+  let j: { success: boolean; data: T; error?: string; details?: unknown };
+  try { j = await res.json() } catch { throw new Error('Apps Script no devolvió JSON. ¿El WebApp está desplegado y con access "anyone"?') }
   if (!j.success) throw new Error(j.error || 'Error API');
   return j.data as T;
 }
